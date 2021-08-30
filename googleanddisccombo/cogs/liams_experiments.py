@@ -7,6 +7,10 @@ class LiamsExperiments(commands.Cog, description='Liams Creations, or whatever h
     #don't touch this statement
     def __init__(self, bot):
         self.bot = bot
+        
+    @commands.command()
+    async def LiamsTest(self, ctx):
+        await ctx.send('Test!')
     #put commands at this indentation below the init function
 
 def setup(bot):
