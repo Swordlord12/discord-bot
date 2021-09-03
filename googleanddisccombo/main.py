@@ -184,8 +184,6 @@ async def help(ctx, *, commandSent=None):
                 cmdlist.append(cmd)
             embed.add_field(name=cog, value=category.description, inline=False)
         await ctx.send(embed=embed)
-        interaction = await bot.wait_for("button_click", check=lambda i: i.component.label.startswith("Additonal"))
-        await interaction.respond(content="You have claimed your reward!")
 
 #alerts the programmer that the bot is ready to be used
 @bot.event
