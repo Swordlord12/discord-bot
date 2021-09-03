@@ -41,34 +41,7 @@ truths = ['placeholder truth']
 
 mgk = ["mgk", "Mgk", "Machine Gun Kelly", "Machine gun kelly", "machine gun kelly"]
 
-ooc = ['https://cdn.discordapp.com/attachments/783881442622308382/870707941932671086/image0.jpg',
-        'https://cdn.discordapp.com/attachments/850408868919509004/860955116752470026/image0.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/857340084088733706/unknown.png',
-        'https://cdn.discordapp.com/attachments/800039486339678250/870709835723853975/unknown.png',
-        'https://cdn.discordapp.com/attachments/800039486339678250/870710600429363261/unknown.png',
-        'https://cdn.discordapp.com/attachments/800039486339678250/870710970887057408/unknown.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/869385234460848169/image0.png',
-        'https://cdn.discordapp.com/attachments/800039486339678250/870711752910852127/unknown.png',
-        'https://cdn.discordapp.com/attachments/795023687501611018/870715907612225557/IMG_3493.jpg',
-        'https://cdn.discordapp.com/attachments/870073339224420393/870718276542541864/Liam_likes_very_special_things_there_I_guess.png',
-        'https://cdn.discordapp.com/attachments/870073339224420393/870718173249425448/image0.png',
-        'https://cdn.discordapp.com/attachments/870073339224420393/870718632735416370/LIAMWHATAREYOUHIDING.png',
-        'https://cdn.discordapp.com/attachments/870073339224420393/870718627140206602/image0.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/870719250275401768/Liamconfessed.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/870720464434131005/ZEKEHASBEENLIKED.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/870721555607453707/unknown.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/870722287815516250/image0.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/870723769604378634/image0.png',
-        'https://cdn.discordapp.com/attachments/795023687501611018/871863915267620884/unknown.png',
-        'https://cdn.discordapp.com/attachments/795023687501611018/871866601627066408/unknown.png',
-        'https://cdn.discordapp.com/attachments/862025232336289810/869263494388793404/image0.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/875148978864402463/unknown.png',
-        'https://cdn.discordapp.com/attachments/850408868919509004/875372858992382062/unknown.png'
-        ]
 
-oocname = ["Do you have an explanation for this one...", "Oh no...", "Caught in 4K."]
-
-ooctext = ["When you try your best but you don't succeed...", "Work smarter not harder buckaroo.", "Better luck next time..."]
 
 def convert(time):
     pos = ["s","m","h","d"]
@@ -283,14 +256,6 @@ class Fun(commands.Cog, description='These commands are random commands used for
         """he rly is a creep"""
         await ctx.send('https://tenor.com/view/mitch-mc-connell-mitch-mcconnell-smile-awkward-gif-8010168')
 
-    @commands.command(aliases=['ooc'])
-    async def outofcontext(self,ctx):
-        """You have done that yourself"""
-        embed = discord.Embed(title='Interesting...', color=0x000080)
-        embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870717643315888168/bae_emoji.png')
-        embed.set_image(url=random.choice(ooc))
-        embed.add_field(name=random.choice(oocname), value=random.choice(ooctext))
-        await ctx.send(embed=embed)
 
     """@commands.command()
     async def prank(self, ctx, joke):
