@@ -70,11 +70,7 @@ buddyholly = ["What's with these homies dissin' my girl?",
             "I don't care 'bout that",
             "I don't care 'bout that"]
 
-bigbad = ["porn", "sex", "hentai", "cum", "cock", "retard"]
-    
-mgk = ["mgk", "Machine Gun Kelly","colson"]
-
-disses = ["He really did have a downfall, but it was long before the album.", "bro he sucks", "🤮"]
+#there were swear words here to filter
 
 labigail = ["Labigail", "labigail"]
 
@@ -276,10 +272,6 @@ async def on_message(message):
     #tells bot to ignore itself or other bots to prevent a nukebot scenario
     if message.author == bot.user or message.author.bot:
         return
-
-    for word in mgk:
-        if word.lower() in str(message.content).lower():
-            await message.channel.send(f"Really. {message.author.mention} 😐")
     
     #do not touch
     for word in labigail:
