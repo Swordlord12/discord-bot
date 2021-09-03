@@ -6,9 +6,6 @@ from discord.ext.commands.context import Context
 
 tracemalloc.start()
 
-mgk = ["Mgk", "mgk", "Machine Gun Kelly", "Machine gun kelly", "machine gun kelly"]
-
-disses = ["He really did have a downfall, but it was long before the album.", "bro he sucks", "🤮"]
 
 class Useful(commands.Cog, description='Commands that might come in handy once in a while.'):
 
