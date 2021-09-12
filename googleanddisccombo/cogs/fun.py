@@ -1,3 +1,4 @@
+import threading
 import discord
 from discord import client
 from discord.ext import commands
@@ -10,6 +11,9 @@ from translate import Translator
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 import gspread
+import timeit
+from threading import Thread, Timer
+import time
 
 #holds API keys for the google service accounts
 SERVICE_ACCOUNT_FILE = 'keys.json'
@@ -25,9 +29,13 @@ maptest = client.open("Map Game VI Database").worksheet("Territories")
 
 SAMPLE_SPREADSHEET_ID = '1EodY2Cs1t1UfarRwF80pIcLLGsD2OfdiyIImRD02g8g'
 
+TRIVIA_ID = '1IjU6hFOiexP4ZFYUuawvCqSc8b6uyu7cS4S5Rz6KLsA'
+
 service = build('sheets', 'v4', credentials=creds)
 
 sheet = service.spreadsheets()
+
+streaks = client.open("Trivia Streaks").worksheet("Streaks")
 
 france = ["French", "France", "french", "france"]
 
@@ -41,7 +49,34 @@ truths = ['placeholder truth']
 
 mgk = ["mgk", "Mgk", "Machine Gun Kelly", "Machine gun kelly", "machine gun kelly"]
 
+ooc = ['https://cdn.discordapp.com/attachments/783881442622308382/870707941932671086/image0.jpg',
+        'https://cdn.discordapp.com/attachments/850408868919509004/860955116752470026/image0.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/857340084088733706/unknown.png',
+        'https://cdn.discordapp.com/attachments/800039486339678250/870709835723853975/unknown.png',
+        'https://cdn.discordapp.com/attachments/800039486339678250/870710600429363261/unknown.png',
+        'https://cdn.discordapp.com/attachments/800039486339678250/870710970887057408/unknown.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/869385234460848169/image0.png',
+        'https://cdn.discordapp.com/attachments/800039486339678250/870711752910852127/unknown.png',
+        'https://cdn.discordapp.com/attachments/795023687501611018/870715907612225557/IMG_3493.jpg',
+        'https://cdn.discordapp.com/attachments/870073339224420393/870718276542541864/Liam_likes_very_special_things_there_I_guess.png',
+        'https://cdn.discordapp.com/attachments/870073339224420393/870718173249425448/image0.png',
+        'https://cdn.discordapp.com/attachments/870073339224420393/870718632735416370/LIAMWHATAREYOUHIDING.png',
+        'https://cdn.discordapp.com/attachments/870073339224420393/870718627140206602/image0.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/870719250275401768/Liamconfessed.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/870720464434131005/ZEKEHASBEENLIKED.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/870721555607453707/unknown.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/870722287815516250/image0.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/870723769604378634/image0.png',
+        'https://cdn.discordapp.com/attachments/795023687501611018/871863915267620884/unknown.png',
+        'https://cdn.discordapp.com/attachments/795023687501611018/871866601627066408/unknown.png',
+        'https://cdn.discordapp.com/attachments/862025232336289810/869263494388793404/image0.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/875148978864402463/unknown.png',
+        'https://cdn.discordapp.com/attachments/850408868919509004/875372858992382062/unknown.png'
+        ]
 
+oocname = ["Do you have an explanation for this one...", "Oh no...", "Caught in 4K."]
+
+ooctext = ["When you try your best but you don't succeed...", "Work smarter not harder buckaroo.", "Better luck next time..."]
 
 def convert(time):
     pos = ["s","m","h","d"]
@@ -256,6 +291,14 @@ class Fun(commands.Cog, description='These commands are random commands used for
         """he rly is a creep"""
         await ctx.send('https://tenor.com/view/mitch-mc-connell-mitch-mcconnell-smile-awkward-gif-8010168')
 
+    @commands.command(aliases=['ooc'])
+    async def outofcontext(self,ctx):
+        """You have done that yourself"""
+        embed = discord.Embed(title='Interesting...', color=0x000080)
+        embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870717643315888168/bae_emoji.png')
+        embed.set_image(url=random.choice(ooc))
+        embed.add_field(name=random.choice(oocname), value=random.choice(ooctext))
+        await ctx.send(embed=embed)
 
     """@commands.command()
     async def prank(self, ctx, joke):
@@ -363,14 +406,14 @@ class Fun(commands.Cog, description='These commands are random commands used for
 
         answers = []
 
-        def check (m):
-            return m.author == ctx.author and m.channel == ctx.channel
+        def check(m: discord.Message):
+            return m.author.id == ctx.author.id and m.channel.id == ctx.channel.id
 
         for i in questions:
             await ctx.send(i)
 
             try:
-                msg = await self.bot.wait_for(event='message', timeout=15.0, check=check)
+                msg = await self.bot.wait_for(event='message', check=check, timeout=15.0)
             except asyncio.TimeoutError:
                 await ctx.send("You did not answer in time.")
                 return
@@ -508,17 +551,17 @@ class Fun(commands.Cog, description='These commands are random commands used for
         global nerd_2
         
         if ctx.author == nerd_1:
-            if answer.title() not in nerd1_score_list or answer.title() not in nerd2_score_list:
+            if answer.title() not in nerd1_score_list and answer.title() not in nerd2_score_list:
                 nerd1_score_list.append(answer.title())
                 await ctx.send(f"+1 point to {ctx.author.mention}")
-            elif answer.title() in nerd1_score_list or answer.title() not in nerd2_score_list:
+            elif answer.title() in nerd1_score_list or answer.title() in nerd2_score_list:
                 await ctx.send("Someone has already answered that.")
 
         elif ctx.author == nerd_2:
-            if answer.title() not in nerd1_score_list or answer.title() not in nerd2_score_list:
+            if answer.title() not in nerd1_score_list and answer.title() not in nerd2_score_list:
                 nerd2_score_list.append(answer.title())
                 await ctx.send(f"+1 point to {ctx.author.mention}")
-            elif answer.title() in nerd1_score_list or answer.title() not in nerd2_score_list:
+            elif answer.title() in nerd1_score_list or answer.title() in nerd2_score_list:
                 await ctx.send("Someone has already answered that.")
 
         else:
@@ -534,33 +577,84 @@ class Fun(commands.Cog, description='These commands are random commands used for
 
     @commands.command(description="Will send a question for you to answer.", aliases=["quiz"])
     @commands.cooldown(1,5,commands.BucketType.user)
-    async def trivia(self, ctx):
-        questions = [["What year did WW2 start? (History)", "C", 1, "A: 1936\nB: 1914\nC: 1939\nD: 1938"],
-                     ["What was the precursor to the Republican Party? (Politics)", "A", 3, "A: Opposition Party\nB: Unconditional Union Party\nC: Whig Party\nD: Nullifier Party"],
-                     ["What does SSD stand for? (Computer Science)", "D", 2, "A: Solid State Disk\nB: Static State Disk\nC: Static State Drive\nD: Solid State Drive"],
-                     ["Which island in Indonesia has the most population? (Geography)", "B", 2, "A: Borneo\nB: Java\nC: Sumatra\nD: Timor"],
-                     ["What is the territory that France ceded in the Franco-Prussian war? (History)","A", 2, "A: Alsace-Lorraine\nB: Savoy\nC: Maginot\nD: Calais"],
-                     ["A communist or authoritarian state normally requires what system?", "C", 2, "A: Nonpartisan System\nB: Fascism\nC: One Party System\nD: Multiparty System"],
-                     ["What was Coldplay's first album? (Music)","D", 2, "A: A Rush of Blood to the Head\nB: A Head Full of Dreams\nC: X&Y\nD: Parachutes" ],
-                     ["What is the closest star to Earth other than the Sun? (Astronomy)", "B", 1, "A: Sirius A\nB: Alpha Centauri\nC: The North Star\nD: Bernard's Star"],
-                     ["What is Sumerian, family and larger than a whale? (Kts suggestion)", "D", 1, "A: Chariots\nB: Mesopatamia\nC: Spears\nD: Ur mom"],
-                     ["How many Pokémon were in the original games (Red/Blue)? (Gaming)", "B", 2, "A: 809\nB: 151\nC: 333\nD: 69"],
-                     ["Which empire was the largest in history? (History)", "A", 1, "A: British Empire\nB: Mongol Empire\nC: Roman Empire\nD: Spanish Empire"],
-                     ["Who was the president before Abraham Lincoln? (U.S. Politics)", "C", 3, "A: Taylor\n B: Polk\n C: Buchanan\n D: Jackson"],
-                     ["What is the most spoken language in the world? (Language)", "B", 1, "A: Hindi\n B: Mandarin\n C: English\n D: Spanish"],
-                     ["What is the most searched website in the US?(as of 2020) (General Trends)", "D", 2, "A: YouTube\n B: Facebook\n C: Twitter\n D: Google"],
-                     ["What is the one country without a national anthem? (Geography)", "C", 3, "A: The Republic of Bosnia and Herzegovina\n B: Barbados\n C: Islamic Emirate of Afghanistan\n D: Republic of Mozambique"],
-                     ["(cosx)/(sinx) is equal to what? (Math)", "A", 2, "A: cotx\n B: cscx\n C: secx\n D: tanx"],
-                     ["What tempo is typically used in marches? (Music)", "D", 2, "A: 90 BPM\n B: 100 BPM\n C: 110 BPM\n D: 120 BPM"],
-                     ["In 1937, the supreme court generally switched its position on which clause of the constitution from narrow to broad? (Law)", "B", 3, "A: Common Defense Clause\n B: Commerce Clause\n C: Revenue Clause\n D: Property Clause"],
-                     ["What is the process of people willingly moving that causes uneven congressional districts? (Political Science)", "C", 2, "A: Natural Selection\n B: Self Detirmination\n C: Self Sorting\n D: Reassortment"]
+    async def trivia(self, ctx, *, category=None):
+        questions = [["What year did WW2 start? (History)", "C", 1, "A: 1936\nB: 1914\nC: 1939\nD: 1938", "history"],
+                     ["What was the precursor to the Republican Party? (History)", "A", 3, "A: Opposition Party\nB: Unconditional Union Party\nC: Whig Party\nD: Nullifier Party", "history"],
+                     ["What does SSD stand for? (Computer Science)", "D", 2, "A: Solid State Disk\nB: Static State Disk\nC: Static State Drive\nD: Solid State Drive", "computer science"],
+                     ["Which island in Indonesia has the most population? (Geography)", "B", 2, "A: Borneo\nB: Java\nC: Sumatra\nD: Timor", 'geography'],
+                     ["What is the territory that France ceded in the Franco-Prussian war? (History)","A", 2, "A: Alsace-Lorraine\nB: Savoy\nC: Maginot\nD: Calais", "history"],
+                     ["A communist or authoritarian state normally requires what system? (Political Science)", "C", 2, "A: Nonpartisan System\nB: Fascism\nC: One Party System\nD: Multiparty System", "political science"],
+                     ["What was Coldplay's first album? (Music)","D", 2, "A: A Rush of Blood to the Head\nB: A Head Full of Dreams\nC: X&Y\nD: Parachutes", "music"],
+                     ["What is the closest star to Earth other than the Sun? (Astronomy)", "B", 1, "A: Sirius A\nB: Alpha Centauri\nC: The North Star\nD: Bernard's Star", "astronomy"],
+                     ["What is Sumerian, family and larger than a whale? (Jokes)", "D", 1, "A: Chariots\nB: Mesopatamia\nC: Spears\nD: Ur mom", 'joke'],
+                     ["How many Pokémon were in the original games (Red/Blue)? (Gaming)", "B", 2, "A: 809\nB: 151\nC: 333\nD: 69", 'gaming'],
+                     ["Which empire was the largest in history? (History)", "A", 1, "A: British Empire\nB: Mongol Empire\nC: Roman Empire\nD: Spanish Empire", 'history'],
+                     ["Who was the president before Abraham Lincoln? (History)", "C", 3, "A: Taylor\n B: Polk\n C: Buchanan\n D: Jackson", "history"],
+                     ["What is the most spoken language in the world? (Language)", "B", 1, "A: Hindi\n B: Mandarin\n C: English\n D: Spanish", 'language'],
+                     ["What is the most searched website in the US?(as of 2020) (General Trends)", "D", 2, "A: YouTube\n B: Facebook\n C: Twitter\n D: Google", "general trends"],
+                     ["What is the one country without a national anthem? (Geography)", "C", 3, "A: The Republic of Bosnia and Herzegovina\n B: Barbados\n C: Islamic Emirate of Afghanistan\n D: Republic of Mozambique", "geography"],
+                     ["(cosx)/(sinx) is equal to what? (Math)", "A", 2, "A: cotx\n B: cscx\n C: secx\n D: tanx", "math"],
+                     ["What tempo is typically used in marches? (Music)", "D", 2, "A: 90 BPM\n B: 100 BPM\n C: 110 BPM\n D: 120 BPM", "music"],
+                     ["In 1937, the supreme court generally switched its position on which clause of the constitution from narrow to broad? (Law)", "B", 3, "A: Common Defense Clause\n B: Commerce Clause\n C: Revenue Clause\n D: Property Clause", "law"],
+                     ["What is the process of people willingly moving that causes uneven congressional districts? (Political Science)", "C", 2, "A: Natural Selection\n B: Self Detirmination\n C: Self Sorting\n D: Reassortment", "political science"], 
+                     ["What is a Fatwa? (Law)", "A", 3, "A: A non binding opinion by an Islamic Scholar\n B: A Jewish law scripture\n C: Vedic laws about worship\n D: Another word for plantiff", "law"],
+                     ["What is the name of the successor state to the Islamic Republic of Afghanistan? (History)", "D", 2, "A: The Democratic People's Republic of Afghanistan\n B: The Taliban\n C: Afghani Provisional Government\n D: The Panjshir Resistance", "history"],
+                     ["The theodemocracy used in Iran is similar to the system of what 19th century North American State? (Political Science)", "B", 3, "A: The Republic of Texas\n B: State of Deseret\n C: Vermont Republic\n D: The United Mexican States", "political science"],
+                     ["What is the Derivative of 4x+3? (Math)", "C", 3, "A: 3\n B: There isn't a derivative\n C: 4\n D: 3.5", 'math'],
+                     ["What is the systematic name of a molecule with 6 carbon atoms, all linked by single bonds, with one fluorine atom replacing the hydrogen of the 3rd carbon? (Chemistry)", "A", 2, "A: 3-Flourohexane\n B: Gamma-Hexoflouride\n C: Third-Bonded Hexane\n D: Chi-Flourohexane", "chemistry"],
+                     ["What is the 4th letter of the Greek Alphabet? (Language)", "B", 1, "A: Epsilon\n B: Delta\n C: Eta\n D: Zeta", "language"],
+                     ["Which list correctly describes the order of ideologies that Germany followed in the 20th century? (History)", "D", 3, "A: Democracy, Fascism, Communism, Monarchy\n B: Naziism, Marxism, Democracy\n C: Kaiserreich, Weimar, NDSAP, Soviet Puppet, Democracy\n D: Monarchy, Democracy, Fascism, Communism, Democracy", "history"],
+                     ["What scientist who worked with Otto Hahn has their name on the periodic table? (History)", "C", 2, "A: Marie Curie\n B: Fritz Haber\n C: Lise Meitner\n D: Eugen Fischer", "history"],
+                     ["What is the genus of Oak trees? (Biology)", "B", 2, "A: Areca\n B: Quercus\n C: Acer\n D: Juglans", "biology"], 
+                     ["What is the limit as x approaches 0 of sinx/x? (Math)", "A", 1, "A: 1\n B: π\n C: -1\n D: -π", "math"],
+                     ["Who was the first lord protector of England? (History)", "D", 1, "A: William of Orange\n B: William the Conqueror\n C: Æthelred\n D: Oliver Cromwell", "history"],
+                     ["What is the most stable radioactive isotope of Carbon? (Chemistry)", "C", 2, "A: Carbon-12\n B: Carbon-13\n C: Carbon-14\n D: Carbon-15", "chemistry"],
+                     ["What is an example of a non object-orientated programming language? (Computer Science)", "B", 1, "A: Python\n B: SQL\n C: Java\n D: Ruby", "computer science"],
+                     ["What does *args do in Python? (Computer Science)", "C", 3, "A: Returns a list of all used arguments inside a function\n B: Returns the number of arguments used in a function\n C: Unpacks a list called args to be used as positional arguments in a function call\n D: Sets a default value for arguments used for a function", "computer science"],
+                     ["What are the most common types of loops in programming languages? (Computer Science)", "A", 1, "A: For & While loops\n B: Repeating & Timed loops\n C: While & Repeating loops\n D: For & Timed loops", "computer science"]
                      ]
 
         answers = []
         def check (m):
             return m.author == ctx.author and m.channel == ctx.channel
-
-        question_used = random.choice(questions)
+        completed = False
+        if category == None:
+            question_used = random.choice(questions)
+        elif category == 'history':
+            history_questions = []
+            for q in questions:
+                if q[4] == 'history':
+                    history_questions.append(q)
+                    completed = True
+            question_used = random.choice(history_questions)
+        elif category == 'chemistry':
+            chem_questions = []
+            for q in questions:
+                if q[4] == 'chemistry':
+                    chem_questions.append(q)
+                    completed = True
+            question_used = random.choice(chem_questions)
+        elif category == 'math':
+            math_questions = []
+            for q in questions:
+                if q[4] == 'math':
+                    math_questions.append(q)
+                    completed = True
+            question_used = random.choice(math_questions)
+        elif category == 'computer science':
+            comp_questions = []
+            for q in questions:
+                if q[4] == 'computer science':
+                    comp_questions.append(q)
+                    completed = True
+            question_used = random.choice(comp_questions)
+        else:
+            embed=discord.Embed(title='Error', color=0xFF0000)
+            embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870443863100248104/XMARKSTHESPOT.png')
+            embed.add_field(name="Invalid Argument", value='That is not a valid category.')
+            await ctx.send(embed=embed)
+            return
+            
 
         embed = discord.Embed(title="Question!", color=0xFFFF00)
         embed.add_field(name=question_used[0], value=question_used[3])
@@ -568,24 +662,71 @@ class Fun(commands.Cog, description='These commands are random commands used for
         embed.set_footer(text="Type the letter of the answer, not the words.")
         embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/871723684816097370/questiones.png')
         await ctx.send(embed=embed)
-
-        try:
-            words = await self.bot.wait_for(event="message", check=check)
-        except asyncio.TimeoutError:
-            await ctx.send("You did not answer in time.")
-            return
-        else:
-            answers.append(words.content)
-            if str(answers[0]).lower() == str(question_used[1]).lower():
+       
+        words = await self.bot.wait_for(event="message", check=check)
+    
+        answers.append(words.content)
+        if str(answers[0]).lower() == str(question_used[1]).lower():
+            result = sheet.values().get(spreadsheetId=TRIVIA_ID,
+                        range="Streaks!A1:C2400").execute()
+            values = result.get('values')
+            found = False
+            counter = 0
+            for row in values:
+                counter += 1
+                if ctx.author.name == row[0]:
+                    streak = int(row[1]) + 1
+                    total_correct = int(row[2]) + 1
+                    found = True
+                    streaks.update_cell(counter, 2, streak)
+                    streaks.update_cell(counter, 3, total_correct)
+            if not found:
+                streak = 1
+                total_correct = 1
+                inputs = [[ctx.author.name, streak, total_correct]]
+                request = sheet.values().append(spreadsheetId=TRIVIA_ID, 
+                            range="Streaks!A1", valueInputOption="USER_ENTERED", body={"values":inputs}).execute()
+            if streak >= 5:
+                embed = discord.Embed(title="YOU'RE ON FIRE!", color=0xFFA500)
+                embed.add_field(name=f"You have added another correct answer to your collection.", value=f"Total: {total_correct}")
+                embed.set_footer(text=f"Streak: {streak} in a row")
+                embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/850408868919509004/883765428986478642/fire.png')
+                await ctx.send(embed=embed)
+                return
+            if streak < 5:
                 embed = discord.Embed(title="Correct!", color=0x00FF00)
-                embed.add_field(name=f'You have added another correct answer to your collection.',value=f'Difficulty Level: {question_used[2]}')
+                embed.add_field(name=f'You have added another correct answer to your collection.',value=f'Total: {total_correct}')
+                embed.set_footer(text=f"Streak: {streak} in a row")
                 embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/871435654049955860/CHECKMARKSTHESPOT.png')
                 await ctx.send(embed=embed)
-            else:
-                embed = discord.Embed(title="Incorrect!",color=0xFF0000)
-                embed.add_field(name=f"The correct answer was {str(question_used[1])}",value=f"Difficulty Level: {question_used[2]}")
-                embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870443863100248104/XMARKSTHESPOT.png')
-                await ctx.send(embed=embed)
+                return
+            
+        else:
+            result = sheet.values().get(spreadsheetId=TRIVIA_ID,
+                        range="Streaks!A1:C2400").execute()
+            values = result.get('values')
+            found = False
+            counter = 0
+            for row in values:
+                counter += 1
+                if ctx.author.name == row[0]:
+                    streak = 0
+                    total_correct = int(row[2])
+                    found = True
+                    streaks.update_cell(counter, 2, streak)
+                    
+            if not found:
+                streak = 0
+                total_correct = 0
+                inputs = [[ctx.author.name, streak, total_correct]]
+                request = sheet.values().append(spreadsheetId=TRIVIA_ID, 
+                            range="Streaks!A1", valueInputOption="USER_ENTERED", body={"values":inputs}).execute()
+            embed = discord.Embed(title="Incorrect!",color=0xFF0000)
+            embed.add_field(name=f"The correct answer was {str(question_used[1])}",value=f"Difficulty Level: {question_used[2]}")
+            embed.set_footer(text=f'Streak: {streak}')
+            embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870443863100248104/XMARKSTHESPOT.png')
+        await ctx.send(embed=embed)
+            
 
 
     @commands.command()

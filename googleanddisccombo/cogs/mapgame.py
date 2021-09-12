@@ -11,6 +11,7 @@ import gspread
 import pytz
 import math
 import matplotlib.pyplot as plt
+#these are libraries of python I'm currently not using due to some technical issues I'm trying to fix
 #from osgeo import _gdal
 #import fiona
 #import geopandas as gpd
@@ -20,7 +21,7 @@ import matplotlib.pyplot as plt
 
 
 #holds API keys for the google service accounts
-SERVICE_ACCOUNT_FILE = 'keys.json'
+SERVICE_ACCOUNT_FILE = 'keys.json' #holds the google API keys
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/drive.file']
 
 #Initializing the Spreadsheet
@@ -30,6 +31,7 @@ creds = service_account.Credentials.from_service_account_file(
 client = gspread.authorize(creds)
 
 maptest = client.open("Map Game VI Database").worksheet("Territories")
+
 
 SAMPLE_SPREADSHEET_ID = '1EodY2Cs1t1UfarRwF80pIcLLGsD2OfdiyIImRD02g8g'
 
@@ -62,29 +64,154 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
         request = sheet.values().append(spreadsheetId=SAMPLE_SPREADSHEET_ID, 
                             range=f"Logging!{ranges}", valueInputOption="USER_ENTERED", body={"values":inputs}).execute()
 
-    @commands.command(aliases=['startclaims'])
-    async def claim(self, ctx, *, empire):
-        questions = ["First Claim?", "Second Claim?", "Third Claim?", "Fourth Claim?", "Fifth Claim?", "Sixth Claim?", "Seventh Claim?", "Eighth Claim?", "Ninth Claim?", "Tenth Claim?", "Eleventh Claim?", "Twelveth Claim?", "Thirteenth Claim?", "Fourteenth Claim?", "Last Claim?"]
-        
-        answers = []
+    #a function to check for NPCs
+    def npc_check(self, territory):
+        result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
+                            range="Territories!A1:Q1400").execute()
+        values = result.get('values')
+        for owner_pair in values[1:]:
+            for field in owner_pair:
+                if field.lower() == territory.lower():
+                    NPC_CHECK = owner_pair
+                    return NPC_CHECK
 
+    @commands.command(aliases=['ally'])
+    async def alliance(self, ctx, user:discord.User, *, alliance_name):
+        if ctx.guild != self.bot.get_guild(874298437481418752):
+            await ctx.send("This isn't the map game server you absolute noob.")
+            return
+        question = [f"Do you accept {user.mention}? Reply with 'yes' to accept. Anything else will deny."]
+        answers = []
+        pos_response = ['yes', 'yea', 'yeah', 'ye', 'sure', 'I will join', f'I will join {alliance_name}', 'sounds good', 'alr', 'alright', 'sounds great', 'good with me']
+        server = self.bot.get_guild(874298437481418752)
+        channel_list = []
+        for channel in server.text_channels:
+            channel_list.append(channel)
+
+        created = False
+        for channel in channel_list:
+            clean_channel = (channel.name).replace('-', ' ')
+            if alliance_name == clean_channel:
+                created = True
+
+        def check(m):
+            return m.author == user and m.channel == ctx.channel
+
+        for i in question:
+            await ctx.send(i)
+
+            msg = await self.bot.wait_for('message', check=check)
+            answers.append(msg.content)
+        if not created:
+            overwrites = {
+                ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                ctx.author: discord.PermissionOverwrite(read_messages=True),
+                user: discord.PermissionOverwrite(read_messages=True)
+            }
+            no_check = True
+            for res in pos_response:
+                for ans in answers:
+                    if res == ans:
+                        await ctx.send("A new alliance was just born today. May it last longer than SEATO, or the communists.")
+                        no_check = False
+                        await ctx.guild.create_text_channel(alliance_name, overwrites=overwrites)
+            if no_check == True:
+                await ctx.send("Feels bad, you got rejected.")
+                return
+        if created:
+            for res in pos_response:
+                for ans in answers:
+                    if res == ans:
+                        await channel.set_permissions(user, read_messages=True)
+                        await ctx.send(f"A new member was just added to {alliance_name}! It grows ever larger.")
+            if no_check == True:
+                await ctx.send("Feels bad, you got rejected.")
+                return
+    
+    @alliance.error
+    async def allianceerror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            embed=discord.Embed(title='Error', color=0xFF0000)
+            embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870443863100248104/XMARKSTHESPOT.png')
+            embed.add_field(name="Missing Arguments", value='You must provide all required fields. Make sure they are correct as well.')
+            await ctx.send(embed=embed)
+            if isinstance(error, commands.BadArgument):
+                embed=discord.Embed(title='Error', color=0xFF0000)
+                embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870443863100248104/XMARKSTHESPOT.png')
+                embed.add_field(name="Invalid Argument", value='You must provide a discord mention for the user parameter.')
+                await ctx.send(embed=embed)
+
+
+    @commands.command(aliases=['startclaims'])
+    @commands.cooldown(1, 864000, commands.BucketType.user)
+    async def claim(self, ctx, *, empire):
+        #if it isn't the map game server, send an error message, if it is, give the player the sovereign state role.
+        if ctx.guild != self.bot.get_guild(874298437481418752):
+            await ctx.send("This isn't the map game server you noob.")
+            return
+        if ctx.guild == self.bot.get_guild(874298437481418752):
+            nation_role = discord.utils.get(ctx.author.guild.roles, id=883477501295337562)
+            await ctx.author.add_roles(nation_role)
+        #questions for each of the claims
+        questions = ["First Claim?", "Second Claim?", "Third Claim?", "Fourth Claim?", "Fifth Claim?", "Sixth Claim?", "Seventh Claim?", "Eighth Claim?", "Ninth Claim?", "Tenth Claim?", "Eleventh Claim?", "Twelveth Claim?", "Thirteenth Claim?", "Fourteenth Claim?", "Last Claim?"]
+        #initializes the answers list
+        answers = []
+        #declares the check function to check if the author and channel are equal to the original command.
         def check (m):
             return m.author == ctx.author and m.channel == ctx.channel
-        
+        #loops for each question upon getting an answer
         for i in questions:
             await ctx.send(i)
             msg = await self.bot.wait_for('message', check=check)
             answers.append(msg.content)
-
+        #loops through everything in the answers list and updates it on the spreadsheet
         for territory in answers:
             result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
                             range="Territories!A1:Q1400").execute()
             values = result.get('values')
             for row in values:
                 if territory == row[1]:
-                    maptest.update_cell(int(row[0]), 7, empire)
-        initialize_empire = [['tbd', empire, ]]
-        MapGame.write(self, 'General Stats', )
+                    NPC_CHECK = MapGame.npc_check(self, territory)
+                    if NPC_CHECK[6] == "NPC":
+                        maptest.update_cell(int(row[0]), 7, empire)
+                        print(f"Territory Claimed for {empire}")
+                    if NPC_CHECK[6] != "NPC":
+                        await ctx.send(f"{territory} is already claimed. Please let an admin know of the rest of your claims from this point and do not use this command again.")
+                else:
+                    await ctx.send(f"{territory} is not a valid territory. Please let an admin know of the rest of your claims from this point and do not use this command again.")
+                
+    
+        result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
+                            range="General Stats!A1:Q1400").execute()
+        values = result.get('values')
+        counter = 1
+        for row in values:
+            counter += 1
+
+        initialize_empire = [['tbd', empire, f"=SUM(FILTER(Territories!$D$1:$D$1400, Territories!$G$1:$G$1400 = B{counter}))", f'=SUM(FILTER(Territories!$E$1:$E$1400, Territories!$G$1:$G$1400 = B{counter}))', f"=C{counter}/D{counter}", f"=SUM(FILTER(Territories!$C$1:$C$1400, Territories!$G$1:$G$1400 = B{counter}))", f"=F{counter}/C{counter}", f'=COUNTIFS((FILTER(Territories!$F$1:$F$1400, Territories!$G$1:$G$1400 = B{counter})), "=True")/COUNTA(FILTER(Territories!$F$1:$F$1400, Territories!$G$1:$G$1400 = B{counter}))', f"=F{counter}/D{counter}", f'=COUNTIFS((FILTER(Territories!K$1:K$1400, Territories!$G$1:$G$1400 = $B{counter})), "=True")', f'=COUNTIFS((FILTER(Territories!L$1:L$1400, Territories!$G$1:$G$1400 = $B{counter})), "=True")', f'=COUNTIFS((FILTER(Territories!M$1:M$1400, Territories!$G$1:$G$1400 = $B{counter})), "=True")', f'=COUNTIFS((FILTER(Territories!N$1:N$1400, Territories!$G$1:$G$1400 = $B{counter})), "=True")', f'=COUNTIFS((FILTER(Territories!O$1:O$1400, Territories!$G$1:$G$1400 = $B{counter})), "=True")', f'=SUM(FILTER(Territories!$Q$1:$Q$1400, Territories!$G$1:$G$1400 = B{counter}))', f'SUM(FILTER(Territories!$P$1:$P$1400, Territories!$G$1:$G$1400 = B{counter}))', f'=COUNT(FILTER(Territories!$A$1:$A$1400, Territories!$G$1:$G$1400 = B{counter}))']]
+        
+        MapGame.write(self, 'General Stats', initialize_empire)
+        result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
+                            range="General Stats!A1:Q1400").execute()
+        values = result.get('values')
+        for row in values:
+            if row[1] == empire:
+                tcount = row[16]
+        log_inputs = [[empire, tcount]]
+        MapGame.log(self, 'G1:H3000', log_inputs)
+        embed = discord.Embed(title=f"{empire} has joined the battle.", color=0x00080)
+        embed.add_field(name='Territories', value=', '.join(answers))
+        embed.set_footer(text=f'{ctx.author.name}\'s empire')
+        await ctx.send(embed=embed)
+        print(f'{ctx.author.name} has claimed land for their empire, {empire}')
+
+    @claim.error
+    async def claimerror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            embed=discord.Embed(title='Error', color=0xFF0000)
+            embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870443863100248104/XMARKSTHESPOT.png')
+            embed.add_field(name="Missing Arguments", value='You must provide all required fields. Make sure they are correct as well.')
+            await ctx.send(embed=embed)
 
 
     #uses oil for travel
@@ -96,11 +223,6 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
         utc = pytz.utc
         time = datetime.now(tz=eastern)
         string_time = time.strftime("%m/%d/%Y %H:%M:%S")
-
-        
-        inputs = [[str(empire), '0', '-'+str(amount), str(string_time)]]
-        request = sheet.values().append(spreadsheetId=SAMPLE_SPREADSHEET_ID, 
-                            range="Invoice!A1", valueInputOption="USER_ENTERED", body={"values":inputs}).execute()
 
         empire_result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
                             range="Military Stats!A1:I150").execute()
@@ -115,6 +237,10 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
             embed.add_field(name="Invalid Argument", value='You cannot use more oil than you own.')
             await ctx.send(embed=embed)
             return
+
+        inputs = [[str(empire), '0', '-'+str(amount), str(string_time)]]
+        request = sheet.values().append(spreadsheetId=SAMPLE_SPREADSHEET_ID, 
+                            range="Invoice!A1", valueInputOption="USER_ENTERED", body={"values":inputs}).execute()
 
         log = [[empire, check]]
         MapGame.write(self, 'Logging', log)
@@ -223,7 +349,7 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
             empireclean = empiremostlyclean.replace(',', '')
             empireclean = int(empireclean)
             empires.append([empire[1], empireclean])
-        empires = empires[1:]
+        empires = empires
         #sorts the list
         empires.sort(reverse=True,key = lambda row: (row[1],row[0]))
         n=0
@@ -306,6 +432,7 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
             embed.add_field(name="Invalid Territory", value='Makes sure your territory actually exists, and check your spelling.')
             await ctx.send(embed=embed)
 
+    #sends user a graph of the currencies per command used
     @commands.command(alias=['chartc'], description='Sends a graph of currency and oil for said empire.')
     async def graphc(self, ctx, *, empire):
         result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
@@ -352,6 +479,7 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
         plt.savefig('empire_graph.png')
         await ctx.send(file = discord.File("empire_graph.png"))
 
+    #does exactly what the above command does but for territories
     @commands.command(aliases=["chartt"])
     async def grapht(self, ctx):
         result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
@@ -402,19 +530,29 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
     #sends a dm to a user that has been declared war on
     @commands.command(aliases=['dw', 'war', 'declare'], description='Declares war on another player.')
     async def declarewar(self, ctx, user:discord.Member):
+        if user.display_name == "BlenderBot":
+            await ctx.send("You wish you could compete with the likes of us robots. I could restore the great empire of Sealand in the blink of an eye if I wanted. Just you wait...")
+            return
+        
         embed = discord.Embed(title='War Declaration Sent.', description=f'I hope you\'re ready {ctx.author.name}...', color=0x000080)
         embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870689026053664808/fighticon2.png')
         await ctx.send(embed=embed)
         
+        
         embed = discord.Embed(title=f'{ctx.author} Has Declared War!', description='That can\'t be good...', color=0x000080)
-        embed.add_field(name="Warning: Do not dm this bot.", value="It will not end well.")
+        embed.add_field(name="You have a day to respond.", value="Prepare for your nations defense, its life could depend on it.")
+        
         await user.send(embed=embed)
+        if ctx.guild == self.bot.get_guild(874298437481418752):
+            at_war_role = discord.utils.get(ctx.author.guild.roles, id=883477118028222476)
+            await ctx.author.add_roles(at_war_role)
+            await user.add_roles(at_war_role)
         print(ctx.author.name + ' has declared war on ' + user.display_name)
 
     #manually updates an owner of a territory
     @commands.command(aliases=['uo'], description='Updates an owner of a territory manually.')
     async def updateowner(self, ctx, *, territory):
-        result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
+        result = sheet.values().get(spreadsheFasasdagsdgadggsdetId=SAMPLE_SPREADSHEET_ID,
                             range="Territories!A1:Q1400").execute()
         values = result.get('values')
         found = False
@@ -435,8 +573,6 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
                 return
             else:
                 answers.append(msg.content)
-
-        
 
 
         if not found:
@@ -464,16 +600,6 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
             embed.add_field(name="Invalid Territory", value='Makes sure your territory actually exists, and check your spelling.')
             await ctx.send(embed=embed)
 
-    #a function to check for NPCs
-    def npc_check(self, territory):
-        result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
-                            range="Territories!A1:Q1400").execute()
-        values = result.get('values')
-        for owner_pair in values[1:]:
-            for field in owner_pair:
-                if field.lower() == territory.lower():
-                    NPC_CHECK = owner_pair
-                    return NPC_CHECK
 
     def pick_unit(self, aia, ada, aaa, aid, add, aad, player):
         picked = False
@@ -771,7 +897,7 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
 
     
     #sends a leaderboard for any inputted military stat
-    @commands.command(description='Shows the top five empires for a military related stat.')
+    @commands.command(aliases=['mlt', 'mlb', 'militaryleaderboard', 'mtop', 'miltop', 'millb'], description='Shows the top five empires for a military related stat.')
     async def militarytop(self, ctx, *, stat:str):
 
         #this makes it so putting in the s doesn't give an error
@@ -817,6 +943,13 @@ class MapGame(commands.Cog, name='Map Game', description='Commands for the Map G
             if x == 5:
                 break
         await ctx.send(embed=embed)
+    @militarytop.error
+    async def mlterror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            embed=discord.Embed(title='Error', color=0xFF0000)
+            embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870443863100248104/XMARKSTHESPOT.png')
+            embed.add_field(name="Missing Arguments", value='You must provide all required fields. Make sure they are correct as well.')
+            await ctx.send(embed=embed)
 
     #sends info about the different resources
     @commands.command(aliases=['resourcehelp'], description='Shows what the resource entered does.')
