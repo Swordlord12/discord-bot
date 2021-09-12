@@ -6,6 +6,9 @@ from discord.ext.commands.context import Context
 
 tracemalloc.start()
 
+mgk = ["Mgk", "mgk", "Machine Gun Kelly", "Machine gun kelly", "machine gun kelly"]
+
+disses = ["He really did have a downfall, but it was long before the album.", "bro he sucks", "🤮"]
 
 class Useful(commands.Cog, description='Commands that might come in handy once in a while.'):
 
@@ -25,7 +28,8 @@ class Useful(commands.Cog, description='Commands that might come in handy once i
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/800039486339678250/870451513854672896/soviet_union_flag.png")
         embed.add_field(name="Great Success!", value=f"Stalin managed to purge {amount} messages successfully.")
         embed.set_footer(icon_url=ctx.author.avatar_url, text=f'{ctx.author.name} ordered the purge.')
-        print(str(amount) + f' messages were purged from {ctx.channel}')       
+        print(str(amount) + f' messages were purged from {ctx.channel}')
+        await ctx.send(embed=embed)       
 
     @commands.command(aliases=["av", "avatar", "profilepic"])
     async def pfp(self, ctx, member : discord.Member):
@@ -61,15 +65,15 @@ class Useful(commands.Cog, description='Commands that might come in handy once i
             embed.add_field(name="Invalid Value", value=f'Stalin does not deal in such meaningless things. Please write a number.')
             await ctx.send(embed=embed)
 
-    @commands.command(aliases=['version'])
+    @commands.command(aliases=['version', "updatelog", "statistics"], description="States some statistics for the bot.")
     async def info(self, ctx):
         """states bots version"""
         serverCount = len(self.bot.guilds)
         memberCount = len(set(self.bot.get_all_members()))
         embed = discord.Embed(title="BlenderBot Info", color = 0x000080)
-        embed.add_field(name="Version:",value="1.9.0 Beta")
-        embed.add_field(name="Update Notes:", value="Added various stats and fixed a bug with the '%stalin' command.", inline=False)
-        embed.add_field(name='Lines of Code:', value="2898 lines of code (100% Python)", inline=False)
+        embed.add_field(name="Version:",value="1.11.1")
+        embed.add_field(name="Update Notes:", value="Many bug fixes", inline=False)
+        embed.add_field(name='Lines of Code:', value="3000+ lines of code (100% Python)", inline=False)
         embed.add_field(name="‎‎‎‎‏‏‎Server Stats", value=f"BlenderBot is in {serverCount} servers and serves {memberCount} members.", inline=False)
         embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/800039486339678250/870688256524701706/BLENDAAAA.png')
         embed.set_footer(text="Created by @Swordlord#9815")

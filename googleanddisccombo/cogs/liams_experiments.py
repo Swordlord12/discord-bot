@@ -1,7 +1,6 @@
 #imports
 import discord
 from discord.ext import commands
-#this cog was to help my friend get a basic idea of how the overall structure worked
 
 class LiamsExperiments(commands.Cog, description='Liams Creations, or whatever he puts in here'):
 
